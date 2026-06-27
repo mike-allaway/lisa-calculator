@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Theme LISA Calculator</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Softer Dark Theme Variables */
+            --bg-color: #09090b;
+            --card-bg: #121217;
+            --panel-bg: #18181f;
+            --text-main: #e2e8f0;
+            --text-muted: #8b949e;
+            --border-color: #2a2a35;
+            
+            /* Four-Color Palette */
+            --contrib-base: #0ea5e9;    /* Deep Sky Blue */
+            --contrib-growth: #eab308;  /* Soft Gold/Yellow */
+            --bonus-base: #c026d3;      /* Deep Fuchsia */
+            --bonus-growth: #84cc16;    /* Dim Lime Green */
+            
+            --withdraw-color: #e11d48;  /* Soft Rose Red */
+            --line-50-color: rgba(255, 255, 255, 0.65); /* Soft White Dash */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            margin: 0;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.01);
+            border: 1px solid #1f1f2e;
+            width: 100%;
+            max-width: 1400px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        h2 { 
+            margin-top: 0; 
+            margin-bottom: 1.5rem; 
+            text-align: center; 
+            color: #f8fafc;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+        }
+
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .panels-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .input-panel {
+            background: var(--panel-bg);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .input-panel h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-panel.accumulation h3 { 
+            color: var(--contrib-base); 
+            border-color: var(--contrib-base); 
+        }
+        
+        .input-panel.withdrawal h3 { 
+            color: var(--withdraw-color); 
+            border-color: var(--withdraw-color);
+        }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-row { display: flex; gap: 0.5rem; }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            background-color: #09090b;
+            color: #f8fafc;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        select { width: auto; cursor: pointer; }
+
+        input[type="number"]:focus, select:focus {
+            border-color: var(--contrib-base);
+            box-shadow: 0 0 8px rgba(14, 165, 233, 0.2);
+        }
+
+        .input-panel.withdrawal input:focus, .input-panel.withdrawal select:focus {
+            border-color: var(--withdraw-color);
+            box-shadow: 0 0 8px rgba(225, 29, 72, 0.2);
+        }
+
+        .error-message {
+            color: var(--withdraw-color);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+            text-align: center;
+            background: rgba(225, 29, 72, 0.1);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--withdraw-color);
+        }
+
+        /* Cookie Consent */
+        .cookie-consent {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .cookie-consent label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .cookie-consent input[type="checkbox"] {
+            margin-top: 0.15rem;
+            accent-color: var(--contrib-base);
+            cursor: pointer;
+        }
+
+        /* KPI Summary Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .stat-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        .stat-card h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .val { font-size: 1.2rem; font-weight: 600; color: var(--text-main); }
+        .stat-card .sub-val { font-size: 0.75rem; color: var(--contrib-growth); margin-top: 0.35rem; font-weight: 500; }
+        .stat-card .sub-val.split { color: var(--text-muted); }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .table-container {
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            display: none;
+            background-color: var(--panel-bg);
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) var(--panel-bg);
+        }
+
+        .table-container::-webkit-scrollbar, .input-section::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-container::-webkit-scrollbar-track, .input-section::-webkit-scrollbar-track { background: var(--panel-bg); }
+        .table-container::-webkit-scrollbar-thumb, .input-section::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        th, td {
+            text-align: right;
+            padding: 0.6rem 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th:first-child, td:first-child { text-align: left; padding-left: 1rem; }
+        th:last-child, td:last-child { padding-right: 1rem; }
+
+        th {
+            background-color: #121217;
+            color: var(--text-muted);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .cash-in { color: var(--contrib-base); font-weight: 500; }
+        .cash-out { color: var(--withdraw-color); font-weight: 500; }
+        .text-muted { color: var(--text-muted); }
+        .col-c-grw { color: var(--contrib-growth); }
+        .col-b-grw { color: var(--bonus-growth); }
+        
+        .phase-divider td {
+            background-color: rgba(225, 29, 72, 0.05);
+            color: var(--withdraw-color);
+            text-align: center !important;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 0.75rem;
+            border-top: 1px solid var(--withdraw-color);
+            border-bottom: 1px solid var(--withdraw-color);
+        }
+
+        /* Desktop Layout Fit */
+        @media (min-width: 992px) {
+            body { height: 100vh; overflow: hidden; }
+            .container { height: calc(100vh - 2rem); }
+            .app-layout {
+                display: grid;
+                grid-template-columns: 310px 1fr;
+                align-items: start;
+                flex-grow: 1;
+                min-height: 0; 
+            }
+            .input-section { height: 100%; overflow-y: auto; padding-right: 0.5rem; }
+            .output-section { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+            .chart-container { flex-shrink: 0; }
+            .table-container { flex-grow: 1; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>LISA Lifetime Planner</h2>
+        
+        <div id="error-msg" class="error-message"></div>
+
+        <div class="app-layout">
+            <!-- Inputs -->
+            <div class="input-section">
+                <div class="panels-wrapper">
+                    <div class="input-panel accumulation">
+                        <h3>Accumulation Phase</h3>
+                        <div class="form-group">
+                            <label for="age">Current Age (18-50)</label>
+                            <input type="number" id="age" min="18" max="50" value="25">
+                        </div>
+                        <div class="form-group">
+                            <label for="contribution">Annual Contrib (£ max 4k)</label>
+                            <input type="number" id="contribution" min="0" max="4000" value="4000">
+                        </div>
+                        <div class="form-group">
+                            <label for="returnRate">Est. Annual Return (%)</label>
+                            <input type="number" id="returnRate" value="7" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="input-panel withdrawal">
+                        <h3>Withdrawal Phase</h3>
+                        <div class="form-group">
+                            <label for="withdrawalStart">Start Age (min 60)</label>
+                            <input type="number" id="withdrawalStart" min="60" value="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="withdrawalAmount">Annual Withdrawal</label>
+                            <div class="input-row">
+                                <select id="withdrawalType">
+                                    <option value="fixed">£</option>
+                                    <option value="percent">%</option>
+                                </select>
+                                <input type="number" id="withdrawalAmount" min="0" value="15000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="endAge">Plan End Age</label>
+                            <input type="number" id="endAge" min="61" max="120" value="90">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cookie Consent Checkbox -->
+                <div class="cookie-consent">
+                    <label>
+                        <input type="checkbox" id="useCookies">
+                        <span>To save your inputs, tick this box. This will store your data locally to you using cookies. No data is shared.</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Outputs -->
+            <div class="output-section">
+                <!-- KPI Summary -->
+                <div class="summary-grid" id="summary-grid">
+                    <div class="stat-card">
+                        <h4>Lifetime Input</h4>
+                        <div class="val" id="sum-input">£0</div>
+                        <div class="sub-val split" id="sum-input-split">£0 Contrib + £0 Bonus</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Age 50 Snapshot</h4>
+                        <div class="val" id="sum-bal50">£0</div>
+                        <div class="sub-val" id="sum-grw50">£0 Total Growth</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Age 60 Snapshot</h4>
+                        <div class="val" id="sum-bal60">£0</div>
+                        <div class="sub-val" id="sum-grw60">£0 Total Growth</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Final Year (<span id="sum-end-age"></span>)</h4>
+                        <div class="val" id="sum-balEnd">£0</div>
+                        <div class="sub-val" id="sum-grwEnd">£0 Total Growth</div>
+                    </div>
+                </div>
+
+                <div class="chart-container" id="chart-container">
+                    <canvas id="lisaChart"></canvas>
+                </div>
+
+                <div class="table-container" id="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Age</th>
+                                <th>Cash Flow</th>
+                                <th>Contributions</th>
+                                <th>Gov Bonus</th>
+                                <th>Contrib Growth</th>
+                                <th>Bonus Growth</th>
+                                <th>Total Growth</th>
+                                <th>Total Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'lisa_planner_saved_data';
+        const rootStyles = getComputedStyle(document.documentElement);
+        
+        const colContrib = rootStyles.getPropertyValue('--contrib-base').trim();
+        const colContribGrw = rootStyles.getPropertyValue('--contrib-growth').trim();
+        const colBonus = rootStyles.getPropertyValue('--bonus-base').trim();
+        const colBonusGrw = rootStyles.getPropertyValue('--bonus-growth').trim();
+        
+        const colWithdraw = rootStyles.getPropertyValue('--withdraw-color').trim();
+        const colLine50 = rootStyles.getPropertyValue('--line-50-color').trim();
+        const colTextMain = rootStyles.getPropertyValue('--text-main').trim();
+        const colGrid = rootStyles.getPropertyValue('--border-color').trim();
+
+        let lisaChart = null;
+
+        // Multi-line vertical marker plugin
+        const verticalLinePlugin = {
+            id: 'verticalLine',
+            afterDraw: chart => {
+                const lines = chart.config.options.plugins.verticalLine?.lines || [];
+                const meta = chart.getDatasetMeta(0);
+                const ctx = chart.ctx;
+
+                lines.forEach(line => {
+                    if (line.index > -1 && meta.data[line.index]) {
+                        const x = meta.data[line.index].x;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(x, chart.chartArea.top);
+                        ctx.lineTo(x, chart.chartArea.bottom);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = line.color; 
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                });
+            }
+        };
+
+        Chart.register(verticalLinePlugin);
+
+        const formatCurrency = (num) => {
+            return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(num);
+        };
+
+        // Persistent Storage Functions
+        function saveSettings(dataObj) {
+            if (!$('#useCookies').is(':checked')) return; // Do not save if consent is unchecked
+            const jsonStr = JSON.stringify(dataObj);
+            try { localStorage.setItem(STORAGE_KEY, jsonStr); } catch(e) {}
+            try { document.cookie = `${STORAGE_KEY}=${encodeURIComponent(jsonStr)}; max-age=31536000; path=/; SameSite=Lax`; } catch(e) {}
+        }
+
+        function clearSettings() {
+            try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+            try { document.cookie = `${STORAGE_KEY}=; max-age=0; path=/; SameSite=Lax`; } catch(e) {}
+        }
+
+        function loadSettings() {
+            let loaded = null;
+            try { loaded = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+            if (!loaded) {
+                try {
+                    const match = document.cookie.split('; ').find(row => row.startsWith(STORAGE_KEY + '='));
+                    if (match) loaded = decodeURIComponent(match.split('=')[1]);
+                } catch(e) {}
+            }
+            return loaded ? JSON.parse(loaded) : null;
+        }
+
+        $(document).ready(function() {
+            // Restore saved cookies/storage if available
+            const saved = loadSettings();
+            if (saved) {
+                if (saved.age) $('#age').val(saved.age);
+                if (saved.contrib) $('#contribution').val(saved.contrib);
+                if (saved.rate) $('#returnRate').val(saved.rate);
+                if (saved.wStart) $('#withdrawalStart').val(saved.wStart);
+                if (saved.wType) $('#withdrawalType').val(saved.wType);
+                if (saved.wAmount) $('#withdrawalAmount').val(saved.wAmount);
+                if (saved.endAge) $('#endAge').val(saved.endAge);
+                // If data exists, it means they previously consented
+                $('#useCookies').prop('checked', true);
+            }
+
+            // Listen for changes
+            $('input[type="number"], select').on('input change', calculateLISA);
+            
+            // Handle cookie consent toggle explicitly
+            $('#useCookies').on('change', function() {
+                if ($(this).is(':checked')) {
+                    calculateLISA(); // Trigger a calculation to save the current state
+                } else {
+                    clearSettings(); // Immediately delete saved data
+                }
+            });
+
+            calculateLISA();
+
+            function calculateLISA() {
+                let age = parseInt($('#age').val());
+                let annualContrib = parseFloat($('#contribution').val());
+                let returnRate = parseFloat($('#returnRate').val());
+                let withdrawalStart = parseInt($('#withdrawalStart').val());
+                let annualWithdrawal = parseFloat($('#withdrawalAmount').val());
+                let withdrawalType = $('#withdrawalType').val();
+                let endAge = parseInt($('#endAge').val());
+                
+                let $errorMsg = $('#error-msg');
+                let $tableContainer = $('#table-container');
+                let $chartContainer = $('#chart-container');
+                let $summaryGrid = $('#summary-grid');
+                let $resultsBody = $('#results-body');
+
+                $errorMsg.hide();
+
+                if (isNaN(age) || isNaN(annualContrib) || isNaN(returnRate) || isNaN(withdrawalStart) || isNaN(annualWithdrawal) || isNaN(endAge)) return; 
+
+                if (age < 18 || age > 50) { showError("Current age for Accumulation must be between 18 and 50."); return; }
+                if (annualContrib < 0 || annualContrib > 4000) { showError("Annual contribution cannot exceed £4,000."); return; }
+                if (withdrawalStart < 60) { showError("You cannot start withdrawing without penalty before age 60."); return; }
+                if (endAge <= withdrawalStart) { showError("Plan End Age must be greater than Withdrawal Start Age."); return; }
+
+                function showError(msg) {
+                    $errorMsg.text(msg).show();
+                    $tableContainer.hide(); $chartContainer.hide(); $summaryGrid.hide();
+                }
+
+                // Attempt to save data based on consent check
+                saveSettings({ age, contrib: annualContrib, rate: returnRate, wStart: withdrawalStart, wType: withdrawalType, wAmount: annualWithdrawal, endAge });
+
+                $resultsBody.empty();
+
+                let contribBal = 0;
+                let bonusBal = 0;
+                let totalContributions = 0;
+                let totalBonus = 0;
+                let rateMultiplier = 1 + (returnRate / 100);
+
+                let maxContributions = 0;
+                let maxBonus = 0;
+                let finalTotalGrowth = 0;
+
+                let labels = [];
+                let dContribs = [], dContribGrw = [], dBonus = [], dBonusGrw = [];
+                let age50Index = -1, withdrawalIndex = -1;
+
+                $('#sum-bal50, #sum-bal60, #sum-balEnd').text('£0');
+                $('#sum-grw50, #sum-grw60, #sum-grwEnd').text('£0 Total Growth');
+
+                for (let currentAge = age; currentAge <= endAge; currentAge++) {
+                    let isAccumulation = currentAge < withdrawalStart;
+                    let cashFlowHtml = "-";
+
+                    if (currentAge === 50) age50Index = labels.length;
+
+                    if (isAccumulation) {
+                        let cThisYear = 0, bThisYear = 0;
+
+                        if (currentAge < 50) {
+                            cThisYear = annualContrib;
+                            bThisYear = annualContrib * 0.25;
+                            cashFlowHtml = `<span class="cash-in">+ ${formatCurrency(cThisYear)}</span>`;
+                        }
+
+                        totalContributions += cThisYear;
+                        totalBonus += bThisYear;
+                        contribBal = (contribBal + cThisYear) * rateMultiplier;
+                        bonusBal = (bonusBal + bThisYear) * rateMultiplier;
+                        
+                        maxContributions = totalContributions;
+                        maxBonus = totalBonus;
+
+                    } else {
+                        if (currentAge === withdrawalStart) {
+                            withdrawalIndex = labels.length;
+                            $resultsBody.append(`<tr class="phase-divider"><td colspan="8">Withdrawal Phase Begins</td></tr>`);
+                        }
+
+                        let currentTotalBal = contribBal + bonusBal;
+                        let actualWithdrawal = withdrawalType === 'fixed' 
+                            ? Math.min(annualWithdrawal, currentTotalBal) 
+                            : Math.min(currentTotalBal * (annualWithdrawal / 100), currentTotalBal);
+                        
+                        if (actualWithdrawal > 0) {
+                            cashFlowHtml = `<span class="cash-out">- ${formatCurrency(actualWithdrawal)}</span>`;
+                            let shrinkRatio = (currentTotalBal - actualWithdrawal) / currentTotalBal;
+                            contribBal *= shrinkRatio;
+                            bonusBal *= shrinkRatio;
+                            totalContributions *= shrinkRatio;
+                            totalBonus *= shrinkRatio;
+                        } else {
+                            cashFlowHtml = `<span class="text-muted">£0</span>`;
+                        }
+
+                        contribBal *= rateMultiplier;
+                        bonusBal *= rateMultiplier;
+                    }
+                    
+                    let cGrowth = Math.max(0, contribBal - totalContributions);
+                    let bGrowth = Math.max(0, bonusBal - totalBonus);
+                    let tGrowth = cGrowth + bGrowth;
+                    let tBalance = contribBal + bonusBal;
+                    
+                    finalTotalGrowth = tGrowth;
+
+                    if (currentAge === 50) {
+                        $('#sum-bal50').text(formatCurrency(tBalance));
+                        $('#sum-grw50').text(`${formatCurrency(tGrowth)} Total Growth`);
+                    }
+                    if (currentAge === 60) {
+                        $('#sum-bal60').text(formatCurrency(tBalance));
+                        $('#sum-grw60').text(`${formatCurrency(tGrowth)} Total Growth`);
+                    }
+
+                    labels.push(currentAge);
+                    dContribs.push(totalContributions);
+                    dContribGrw.push(cGrowth);
+                    dBonus.push(totalBonus);
+                    dBonusGrw.push(bGrowth);
+
+                    $resultsBody.append(`
+                        <tr>
+                            <td>${currentAge}</td>
+                            <td>${cashFlowHtml}</td>
+                            <td>${formatCurrency(totalContributions)}</td>
+                            <td>${formatCurrency(totalBonus)}</td>
+                            <td class="col-c-grw">${formatCurrency(cGrowth)}</td>
+                            <td class="col-b-grw">${formatCurrency(bGrowth)}</td>
+                            <td>${formatCurrency(tGrowth)}</td>
+                            <td><strong>${formatCurrency(tBalance)}</strong></td>
+                        </tr>
+                    `);
+
+                    if (!isAccumulation && tBalance <= 0) break;
+                }
+                
+                $('#sum-input').text(formatCurrency(maxContributions + maxBonus));
+                $('#sum-input-split').text(`${formatCurrency(maxContributions)} Contrib + ${formatCurrency(maxBonus)} Bonus`);
+                $('#sum-balEnd').text(formatCurrency(contribBal + bonusBal));
+                $('#sum-grwEnd').text(`${formatCurrency(finalTotalGrowth)} Total Growth`);
+                $('#sum-end-age').text(labels[labels.length - 1]);
+
+                $tableContainer.css('display', 'block');
+                $chartContainer.css('display', 'block');
+                $summaryGrid.css('display', 'grid');
+                updateChart(labels, dContribs, dContribGrw, dBonus, dBonusGrw, age50Index, withdrawalIndex);
+            }
+
+            function updateChart(labels, contribs, contribGrw, bonus, bonusGrw, age50Index, withdrawalIndex) {
+                const ctx = document.getElementById('lisaChart').getContext('2d');
+                if (lisaChart) lisaChart.destroy(); 
+
+                Chart.defaults.color = colTextMain;
+                Chart.defaults.borderColor = colGrid;
+
+                lisaChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Your Contributions', data: contribs, backgroundColor: colContrib },
+                            { label: 'Contrib Growth', data: contribGrw, backgroundColor: colContribGrw },
+                            { label: 'Gov Bonus', data: bonus, backgroundColor: colBonus },
+                            { label: 'Bonus Growth', data: bonusGrw, backgroundColor: colBonusGrw }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            x: { stacked: true, grid: { color: colGrid } },
+                            y: { stacked: true, grid: { color: colGrid }, ticks: { callback: val => '£' + val.toLocaleString() } }
+                        },
+                        plugins: {
+                            legend: { labels: { color: colTextMain, boxWidth: 12 } },
+                            tooltip: {
+                                backgroundColor: 'rgba(18, 18, 23, 0.95)',
+                                borderColor: colGrid, borderWidth: 1, padding: 10,
+                                callbacks: {
+                                    label: context => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`,
+                                    footer: items => `Total Value: ${formatCurrency(items.reduce((acc, i) => acc + i.parsed.y, 0))}`
+                                },
+                                footerFont: { weight: 'bold', size: 13 }, footerMarginTop: 8
+                            },
+                            verticalLine: {
+                                lines: [
+                                    { index: age50Index, color: colLine50 },
+                                    { index: withdrawalIndex, color: colWithdraw }
+                                ]
+                            }
+                        },
+                        layout: { padding: { top: 5, bottom: 5 } }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
